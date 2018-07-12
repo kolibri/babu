@@ -1,0 +1,68 @@
+# fooling around on how a dsl for a simple "build" tool could look like
+# usecase: group commands from different tools into a project specific task structure
+
+# idea of usage: `babu init env=dev`
+# idea of usage: `babu symfony command=c:c`
+
+# base order of the commands:
+# $ rm -rf ./vendor ./coverage
+# $ composer install -n
+# $ ./vendor/bin/simple-phpunit --coverage-html=coverage
+# $ ./bin/console server:start
+# examples are reorderd for demonstration
+
+vars:
+    # default variables
+    env: dev
+    # env: $ENV for environment variables
+tasks:
+    # define task ...
+    clean: 
+        # ... add commands
+        rm -rf ./vendor
+        rm -rf ./coverage
+    # maybe this inline shortcut is a thing?
+    test: ./vendor/bin/simple-phpunit --coverage-html=coverage
+
+    # tasks can be templates
+    # access to all variables in vars: and passed from task and command line
+    symfony: 
+        ./bin/console {command} --env={env} -n
+    # maybe some kind of template resuage?
+    symfony-verbose: 
+        symfony:
+            command: {command} -vvv
+    # shortcut should be possible
+    composer: "composer {command} -n"
+
+    install:
+        # template usage: Just call templates name... 
+        composer:
+            # ... then pass hased variables to template
+            command: install
+
+    # grouping
+    init: 
+        @install # target other tasks with '@'-prefix
+        @?test # ? means, this command may fail, but will not stop execution 
+        symfony-verbose:
+            command: c:c
+        symfony:
+            command: server:start
+
+    whuui:
+        # loop is special "template" (why do we need loops?)
+        loop: 
+            body: 
+                echo "I am an a roalercoaster. This is the {item.key} round. I feel {item.value}"
+            items: [awesome, sublime, horrible]
+
+    good_loop: # comment behind task c/should be displayed with `babu list` or just `babu`
+        loop:
+            body:
+                symfony:
+                    command: "{item.value}"
+            items:
+                - do:da:dr --force
+                - do:da:cr
+                - do:sc:cr
